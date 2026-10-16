@@ -1350,5 +1350,42 @@
         "argType": "number"
       }
     ]
+  },
+  {
+    "name": "configure_webauthn",
+    "args": [
+      {
+        "name": "page_id",
+        "argType": "number"
+      },
+      {
+        "name": "action",
+        "argType": "string"
+      },
+      {
+        "name": "authenticator_id_length",
+        "argType": "number"
+      },
+      {
+        "name": "protocol",
+        "argType": "string"
+      },
+      {
+        "name": "transport",
+        "argType": "string"
+      },
+      {
+        "name": "has_resident_key",
+        "argType": "boolean"
+      },
+      {
+        "name": "has_user_verification",
+        "argType": "boolean"
+      },
+      {
+        "name": "is_user_verified",
+        "argType": "boolean"
+      }
+    ]
   }
 ]

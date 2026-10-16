@@ -72,6 +72,8 @@
   - [`install_pwa`](#install_pwa)
   - [`launch_pwa`](#launch_pwa)
   - [`uninstall_pwa`](#uninstall_pwa)
+- **[WebAuthn](#webauthn)** (1 tools)
+  - [`configure_webauthn`](#configure_webauthn)
 
 ## Input automation
 
@@ -856,5 +858,26 @@ third-party developer tools with additional functionality. (requires flag: --cat
 **Parameters:**
 
 - **manifestId** (string) **(required)**: The manifest ID of the web app: the resolved `id` member of its manifest. If `id` is omitted, it defaults to the resolved `start_url` (e.g. "https://example.com/"). See https://w3c.github.io/manifest/#id-member.
+
+---
+
+## WebAuthn
+
+> NOTE: The WebAuthn category is not active by default. Use the '--categoryWebauthn' flag.
+
+### `configure_webauthn`
+
+**Description:** Manages virtual WebAuthn authenticators on the selected page so passkey and security key flows can be tested without a physical device. Add an authenticator before the page calls navigator.credentials.create() or get(); it then answers those calls automatically. Authenticators belong to the page and are removed when it closes. (requires flag: --categoryWebauthn=true)
+
+**Parameters:**
+
+- **action** (enum: "add_authenticator", "remove_authenticator", "list_authenticators", "list_credentials", "clear_credentials", "set_user_verified") **(required)**: The operation to perform.
+- **pageId** (number) **(required)**: Targets a specific page by ID.
+- **authenticatorId** (string) _(optional)_: The authenticator to act on, as returned by add_authenticator. Required for every action except add_authenticator and list_authenticators.
+- **hasResidentKey** (boolean) _(optional)_: add_authenticator: whether the authenticator can store discoverable credentials (passkeys). Default: true.
+- **hasUserVerification** (boolean) _(optional)_: add_authenticator: whether the authenticator supports user verification (PIN or biometrics). Default: true.
+- **isUserVerified** (boolean) _(optional)_: add_authenticator and set_user_verified: whether user verification succeeds. Set to false to test a failed verification. Default: true.
+- **protocol** (enum: "ctap2", "u2f") _(optional)_: add_authenticator: the protocol to [`emulate`](#emulate). Default: ctap2.
+- **transport** (enum: "internal", "usb", "nfc", "ble", "hybrid") _(optional)_: add_authenticator: "internal" emulates a platform authenticator such as Touch ID or Windows Hello; the others [`emulate`](#emulate) roaming security keys. Default: internal.
 
 ---

@@ -250,6 +250,85 @@ export const commands: Commands = {
       },
     },
   },
+  configure_webauthn: {
+    description:
+      'Manages virtual WebAuthn authenticators on the selected page so passkey and security key flows can be tested without a physical device. Add an authenticator before the page calls navigator.credentials.create() or get(); it then answers those calls automatically. Authenticators belong to the page and are removed when it closes. (requires flag: --categoryWebauthn=true)',
+    category: 'WebAuthn',
+    args: {
+      pageId: {
+        name: 'pageId',
+        type: 'number',
+        description: 'Targets a specific page by ID.',
+        required: true,
+        positional: true,
+      },
+      action: {
+        name: 'action',
+        type: 'string',
+        description: 'The operation to perform.',
+        required: true,
+        positional: true,
+        enum: [
+          'add_authenticator',
+          'remove_authenticator',
+          'list_authenticators',
+          'list_credentials',
+          'clear_credentials',
+          'set_user_verified',
+        ],
+      },
+      authenticatorId: {
+        name: 'authenticatorId',
+        type: 'string',
+        description:
+          'The authenticator to act on, as returned by add_authenticator. Required for every action except add_authenticator and list_authenticators.',
+        required: false,
+        positional: false,
+      },
+      protocol: {
+        name: 'protocol',
+        type: 'string',
+        description:
+          'add_authenticator: the protocol to emulate. Default: ctap2.',
+        required: false,
+        positional: false,
+        enum: ['ctap2', 'u2f'],
+      },
+      transport: {
+        name: 'transport',
+        type: 'string',
+        description:
+          'add_authenticator: "internal" emulates a platform authenticator such as Touch ID or Windows Hello; the others emulate roaming security keys. Default: internal.',
+        required: false,
+        positional: false,
+        enum: ['internal', 'usb', 'nfc', 'ble', 'hybrid'],
+      },
+      hasResidentKey: {
+        name: 'hasResidentKey',
+        type: 'boolean',
+        description:
+          'add_authenticator: whether the authenticator can store discoverable credentials (passkeys). Default: true.',
+        required: false,
+        positional: false,
+      },
+      hasUserVerification: {
+        name: 'hasUserVerification',
+        type: 'boolean',
+        description:
+          'add_authenticator: whether the authenticator supports user verification (PIN or biometrics). Default: true.',
+        required: false,
+        positional: false,
+      },
+      isUserVerified: {
+        name: 'isUserVerified',
+        type: 'boolean',
+        description:
+          'add_authenticator and set_user_verified: whether user verification succeeds. Set to false to test a failed verification. Default: true.',
+        required: false,
+        positional: false,
+      },
+    },
+  },
   drag: {
     description: 'Drag an element onto another element',
     category: 'Input automation',

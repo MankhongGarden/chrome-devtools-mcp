@@ -470,5 +470,13 @@
   {
     "name": "screencast_fps_present",
     "flagType": "boolean"
+  },
+  {
+    "name": "category_webauthn_present",
+    "flagType": "boolean"
+  },
+  {
+    "name": "category_webauthn",
+    "flagType": "boolean"
   }
 ]
