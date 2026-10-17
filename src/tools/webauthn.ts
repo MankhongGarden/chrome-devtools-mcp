@@ -4,47 +4,47 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type {CDPSession, Page} from '../third_party/index.js';
+import type {DevTools, WebAuthnModel} from '../third_party/index.js';
 import {zod} from '../third_party/index.js';
 
 import {ToolCategory} from './categories.js';
 import {definePageTool} from './ToolDefinition.js';
 
-const enabledSessions = new WeakSet<CDPSession>();
-const authenticatorsByPage = new WeakMap<Page, Set<string>>();
+type AuthenticatorId = DevTools.Protocol.WebAuthn.AuthenticatorId;
 
-async function getWebAuthnSession(page: Page): Promise<CDPSession> {
-  // @ts-expect-error internal API
-  const session: CDPSession = page._client();
-  if (!enabledSessions.has(session)) {
-    await session.send('WebAuthn.enable', {enableUI: false});
-    enabledSessions.add(session);
-  }
-  return session;
-}
+const authenticatorsByModel = new WeakMap<WebAuthnModel, Set<string>>();
 
-function getAuthenticators(page: Page): Set<string> {
-  let authenticators = authenticatorsByPage.get(page);
+function getAuthenticators(model: WebAuthnModel): Set<string> {
+  let authenticators = authenticatorsByModel.get(model);
   if (!authenticators) {
     authenticators = new Set();
-    authenticatorsByPage.set(page, authenticators);
+    authenticatorsByModel.set(model, authenticators);
   }
   return authenticators;
 }
 
 function requireAuthenticatorId(
-  page: Page,
+  model: WebAuthnModel,
   authenticatorId: string | undefined,
-): string {
+): AuthenticatorId {
   if (!authenticatorId) {
     throw new Error('authenticatorId is required for this action.');
   }
-  if (!getAuthenticators(page).has(authenticatorId)) {
+  if (!getAuthenticators(model).has(authenticatorId)) {
     throw new Error(
       `No virtual authenticator with id "${authenticatorId}" on this page.`,
     );
   }
-  return authenticatorId;
+  return authenticatorId as AuthenticatorId;
+}
+
+function throwOnProtocolError(response: {
+  getError(): string | undefined;
+}): void {
+  const error = response.getError();
+  if (error) {
+    throw new Error(error);
+  }
 }
 
 export const configureWebAuthn = definePageTool(() => ({
@@ -106,26 +106,25 @@ export const configureWebAuthn = definePageTool(() => ({
   blockedByDialog: false,
   verifyFilesSchema: {},
   handler: async (request, response) => {
-    const page = request.page.pptrPage;
     const {action} = request.params;
-    const session = await getWebAuthnSession(page);
-    const authenticators = getAuthenticators(page);
+    const model = await request.page.getWebAuthnModel();
+    const authenticators = getAuthenticators(model);
 
     switch (action) {
       case 'add_authenticator': {
-        const {authenticatorId} = await session.send(
-          'WebAuthn.addVirtualAuthenticator',
-          {
-            options: {
-              protocol: request.params.protocol ?? 'ctap2',
-              transport: request.params.transport ?? 'internal',
-              hasResidentKey: request.params.hasResidentKey ?? true,
-              hasUserVerification: request.params.hasUserVerification ?? true,
-              isUserVerified: request.params.isUserVerified ?? true,
-              automaticPresenceSimulation: true,
-            },
-          },
-        );
+        const authenticatorId = await model.addAuthenticator({
+          protocol: (request.params.protocol ??
+            'ctap2') as DevTools.Protocol.WebAuthn.AuthenticatorProtocol,
+          transport: (request.params.transport ??
+            'internal') as DevTools.Protocol.WebAuthn.AuthenticatorTransport,
+          hasResidentKey: request.params.hasResidentKey ?? true,
+          hasUserVerification: request.params.hasUserVerification ?? true,
+          isUserVerified: request.params.isUserVerified ?? true,
+          automaticPresenceSimulation: true,
+        });
+        if (!authenticatorId) {
+          throw new Error('Failed to add a virtual authenticator.');
+        }
         authenticators.add(authenticatorId);
         response.appendResponseLine(
           `Added virtual authenticator: ${authenticatorId}`,
@@ -147,12 +146,10 @@ export const configureWebAuthn = definePageTool(() => ({
       }
       case 'remove_authenticator': {
         const authenticatorId = requireAuthenticatorId(
-          page,
+          model,
           request.params.authenticatorId,
         );
-        await session.send('WebAuthn.removeVirtualAuthenticator', {
-          authenticatorId,
-        });
+        await model.removeAuthenticator(authenticatorId);
         authenticators.delete(authenticatorId);
         response.appendResponseLine(
           `Removed virtual authenticator: ${authenticatorId}`,
@@ -161,13 +158,11 @@ export const configureWebAuthn = definePageTool(() => ({
       }
       case 'list_credentials': {
         const authenticatorId = requireAuthenticatorId(
-          page,
+          model,
           request.params.authenticatorId,
         );
-        const {credentials} = await session.send('WebAuthn.getCredentials', {
-          authenticatorId,
-        });
-        if (credentials.length === 0) {
+        const credentials = await model.getCredentials(authenticatorId);
+        if (!credentials?.length) {
           response.appendResponseLine(
             `No credentials stored in ${authenticatorId}.`,
           );
@@ -190,10 +185,15 @@ export const configureWebAuthn = definePageTool(() => ({
       }
       case 'clear_credentials': {
         const authenticatorId = requireAuthenticatorId(
-          page,
+          model,
           request.params.authenticatorId,
         );
-        await session.send('WebAuthn.clearCredentials', {authenticatorId});
+        throwOnProtocolError(
+          await model
+            .target()
+            .webAuthnAgent()
+            .invoke_clearCredentials({authenticatorId}),
+        );
         response.appendResponseLine(
           `Cleared all credentials in ${authenticatorId}.`,
         );
@@ -201,16 +201,18 @@ export const configureWebAuthn = definePageTool(() => ({
       }
       case 'set_user_verified': {
         const authenticatorId = requireAuthenticatorId(
-          page,
+          model,
           request.params.authenticatorId,
         );
         if (request.params.isUserVerified === undefined) {
           throw new Error('isUserVerified is required for set_user_verified.');
         }
-        await session.send('WebAuthn.setUserVerified', {
-          authenticatorId,
-          isUserVerified: request.params.isUserVerified,
-        });
+        throwOnProtocolError(
+          await model.target().webAuthnAgent().invoke_setUserVerified({
+            authenticatorId,
+            isUserVerified: request.params.isUserVerified,
+          }),
+        );
         response.appendResponseLine(
           `User verification for ${authenticatorId} now ${request.params.isUserVerified ? 'succeeds' : 'fails'}.`,
         );

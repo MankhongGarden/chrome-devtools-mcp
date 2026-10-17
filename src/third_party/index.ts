@@ -130,3 +130,4 @@ export async function generateReport(
 }
 
 export * as DevTools from '../../third_party/devtools-frontend/mcp/mcp.js';
+export {WebAuthnModel} from '../../third_party/devtools-frontend/front_end/core/sdk/WebAuthnModel.js';

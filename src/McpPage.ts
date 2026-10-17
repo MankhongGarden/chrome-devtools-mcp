@@ -30,6 +30,7 @@ import {
   type HTTPRequest,
   DevTools,
   type JSONSchema7Definition,
+  WebAuthnModel,
 } from './third_party/index.js';
 import type {ToolGroups} from './tools/thirdPartyDeveloper.js';
 import type {
@@ -166,6 +167,7 @@ export class McpPage implements ContextPage {
   // Metadata
   isolatedContextName?: string;
   #devtoolsUniverse?: TargetUniverse;
+  #webAuthnEnabled = false;
 
   // Dialog
   #dialog?: Dialog;
@@ -365,6 +367,24 @@ export class McpPage implements ContextPage {
 
   get devtoolsUniverse(): TargetUniverse | undefined {
     return this.#devtoolsUniverse;
+  }
+
+  async getWebAuthnModel(): Promise<WebAuthnModel> {
+    const target = this.#devtoolsUniverse?.target;
+    if (!target) {
+      throw new Error(
+        `DevTools universe is not available for page ${this.id ?? '?'}.`,
+      );
+    }
+    const model = target.model(WebAuthnModel);
+    if (!model) {
+      throw new Error(`WebAuthn is not supported on page ${this.id ?? '?'}.`);
+    }
+    if (!this.#webAuthnEnabled) {
+      await target.webAuthnAgent().invoke_enable({enableUI: false});
+      this.#webAuthnEnabled = true;
+    }
+    return model;
   }
 
   getDialog(): Dialog | undefined {

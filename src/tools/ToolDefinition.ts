@@ -36,6 +36,7 @@ import type {
   DevTools,
   Protocol,
   Page,
+  WebAuthnModel,
   WebMCPTool,
 } from '../third_party/index.js';
 import type {InsightName, TraceResult} from '../processors/PerformanceTrace.js';
@@ -449,6 +450,7 @@ export type ContextPage = Readonly<{
   getAXNodeByUid(uid: string): TextSnapshotNode | undefined;
   getElementByUid(uid: string): Promise<ElementHandle<Element>>;
   getMatchedStylesForUid(uid: string): Promise<MatchedStyles>;
+  getWebAuthnModel(): Promise<WebAuthnModel>;
 
   /**
    * Returns a reqid for a cdpRequestId.
